@@ -401,8 +401,11 @@ class Redeem:
             # Mosfets
             name = "Heater-{}".format(e)
             channel = self.printer.config.get("Heaters", name, "mosfet")
+            frequency = self.printer.config.get("Heaters", name, "frequency")
             if printer.config.board_name == "Revolve":
                 self.printer.mosfets[e] = Mosfet(channel, "AM335")
+                logging.debug(frequency)
+                self.printer.mosfets[e].set_frequency(frequency)
             else:
                 self.printer.mosfets[e] = Mosfet(channel, "PCA9685")
         # Make Mosfets and thermistors

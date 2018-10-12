@@ -96,16 +96,16 @@ class PWM_AM335(object):
             self.chip = 0
             self.channel = 1
         elif pin == "0:0":
-            self.chip = 0
+            self.chip = 4
             self.channel = 0
         elif pin == "0:1":
-            self.chip = 0
+            self.chip = 4
             self.channel = 1
         elif pin == "2:0":
-            self.chip = 2
+            self.chip = 6
             self.channel = 0
         elif pin == "2:1":
-            self.chip = 2
+            self.chip = 6
             self.channel = 1
         elif pin == "4:0":
             self.chip = 0
@@ -147,11 +147,12 @@ class PWM_AM335(object):
 
     def set_frequency(self, freq):
         """ Set the PWM frequency for all fans connected on this PWM-chip """
-        # period is specified in picoseconds
-        period = int( (1.0/float(freq))*(10**9) )
+        # period is specified in nanoseconds
+        period = int( (1.0/float(freq))*(10**6) )
         self.period = period
         path = self.base+"/period"
-        logging.debug("Setting period to "+str(period))
+        
+        logging.debug("Setting period to "+str(period)+" (freq: "+str(freq)+")")
         with open(path, "w") as f:
             f.write(str(period))
 

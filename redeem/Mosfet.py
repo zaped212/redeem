@@ -30,7 +30,7 @@ class Mosfet:
         self.channel = channel
         self.power = 0.0
         if chip_type == "AM335":
-            self.chip = PWM_AM335(channel, 100, 0.0)
+            self.chip = PWM_AM335(channel, 10, 0.0)
             self.chip_type = 0
         elif chip_type == "PCA9685":
             self.chip = PWM_PCA9685
@@ -49,6 +49,10 @@ class Mosfet:
 
     def get_power(self):
         return self.power
+
+    def set_frequency(self, freq):
+        if self.chip_type == 0:
+            self.chip.set_frequency(freq)
 
 if __name__ == '__main__':
 
