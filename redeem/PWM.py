@@ -86,55 +86,32 @@ class PWM_PCA9685(object):
 
 
 class PWM_AM335(object):
+
+    claimed_pins = []
     def __init__(self, pin, frequency, duty_cycle):
 
+        logging.debug("PWM_AM335: Setting up pin '{}'".format(pin))
+
         self.enabled = False
+
         if pin == "P9_14":
-            self.chip = 0
-            self.channel = 0
-            self.type = "PWM"
-        elif pin == "P9_16":
-            self.chip = 0
-            self.channel = 1
-            self.type = "PWM"
-        elif pin == "4:0":
-            self.chip = 4
-            self.channel = 0
-            self.type = "PWM"
-        elif pin == "4:1":
-            self.chip = 4
-            self.channel = 1
-            self.type = "PWM"
-        elif pin == "6:0":
-            self.chip = 6
-            self.channel = 0
-            self.type = "PWM"
-        elif pin == "6:1":
-            self.chip = 6
-            self.channel = 1
-            self.type = "PWM"
-        elif pin == "0:0":
-            self.chip = 0
-            self.channel = 0
-            self.type = "TIMER"
-        elif pin == "1:0":
-            self.chip = 1
-            self.channel = 0
-            self.type = "TIMER"
-        elif pin == "2:0":
-            self.chip = 2
-            self.channel = 0
-            self.type = "TIMER"
-        elif pin == "3:0":
-            self.chip = 3
-            self.channel = 0
+            pin = "0:0"
+        if pin == "P9_16":
+            pin = "0:1"
+
+        (self.chip, self.channel) = pin.split(":")
+
+        if self.chip in [0, 1, 2, 3]:
             self.type = "TIMER"
         else:
-            self.chip = -1
-            self.channel = -1
-            self.type = "NONE"
-            logging.error("PWM_AM335: Unrecognized pin '{}'. You may have to implement it...".format(pin))
-            return
+            self.type = "PWM"
+
+        self.pin = pin
+
+        if pin in PWM_AM335.claimed_pins:
+            logging.error("PWM_AM335: Trying to add pin {}, but it has already been added".format(pin))
+        else:
+            PWM_AM335.claimed_pins.append(pin)
 
         self.export_chip(self.chip, self.channel)
         self.set_frequency(frequency)
@@ -161,10 +138,10 @@ class PWM_AM335(object):
     def set_frequency(self, freq):
         """ Set the PWM frequency for all fans connected on this PWM-chip """
         if self.type == "TIMER" and freq > 1000:
-            logging.warning("Frequency too high, clamping to {} Hz for {} pin {}:{}".format(freq, self.type, self.chip, self.channel))
+            logging.warning("Frequency too high ({} Hz), clamping to 1000 Hz for {}, pin {}:{}".format(freq, self.type, self.chip, self.channel))
             freq = 1000
         if self.type == "PWM" and freq < 1000:
-            logging.warning("Frequency too low, clamping to {} Hz for {} pin {}:{}".format(freq, self.type, self.chip, self.channel))
+            logging.warning("Frequency too low ({} Hz), clamping to 1000 Hz for {}, pin {}:{}".format(freq, self.type, self.chip, self.channel))
             freq = 1000
         # period is specified in nanoseconds
         period = int( (1.0/float(freq))*(10**9) )

@@ -77,9 +77,9 @@ printer = None
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
-                    
+
 class Redeem:
-    
+
     def __init__(self, config_location="/etc/redeem"):
         """
         config_location: provide the location to look for config files.
@@ -101,37 +101,37 @@ class Redeem:
             logging.info(local_path + " does not exist, Creating one")
             os.mknod(local_path)
             os.chmod(local_path, 0o777)
-            
-        
+
+
         configs = [os.path.join(config_location,'default.cfg'),
                    os.path.join(config_location,'printer.cfg'),
                    os.path.join(config_location,'local.cfg')]
-                   
+
         self.config_error = []
-            
+
         # run initialisation
         self.initialize(configs)
-        
+
         if self.config_error:
             for err in self.config_error:
                 Alarm(Alarm.CONFIG_ERROR, err)
 
         return
-            
-            
+
+
     def initialize(self, configs=[]):
         """
         set up the printer
         """
-        
+
         if not configs:
             msg = "No configuration files provided, aborting"
             logging.error(msg)
             raise RuntimeError(msg)
-            
+
         firmware_version = "{}~{}".format(__version__, __release_name__)
         logging.info("Redeem initializing "+firmware_version)
-        
+
         printer = Printer()
         self.printer = printer
         Path.printer = printer
@@ -145,17 +145,17 @@ class Redeem:
         Alarm.printer = self.printer
         Alarm.executor = AlarmExecutor()
         alarm = Alarm(Alarm.ALARM_TEST, "Alarm framework operational")
-        
+
         # Parse the config files.
-        printer.config = CascadingConfigParser(configs, 
-                                               allow_new = ["Temperature Control", "Steppers"]) # <-- this is where users are allowed to add stuff to the config 
+        printer.config = CascadingConfigParser(configs,
+                                               allow_new = ["Temperature Control", "Steppers"]) # <-- this is where users are allowed to add stuff to the config
 
         if not self.logging:
             # Get the revision and loglevel from the Config file
             level = self.printer.config.getint('System', 'loglevel')
             if level > 0:
                 logging.getLogger().setLevel(level)
-    
+
             # Set up additional logging, if present:
             if self.printer.config.getboolean('System', 'log_to_file'):
                 logfile = self.printer.config.get('System', 'logfile')
@@ -165,7 +165,7 @@ class Redeem:
                 printer.redeem_logging_handler.setLevel(level)
                 logging.getLogger().addHandler(printer.redeem_logging_handler)
                 logging.info("-- Logfile configured --")
-            
+
             self.logging = True
 
         # Find out which capes are connected
@@ -268,7 +268,7 @@ class Redeem:
             spi_1_0.open(1, 0)
             spi_1_1 = spidev.SpiDev()
             spi_1_1.open(1, 1)
-    
+
             cfg = self.printer.config["Steppers"]
 
             for name, options in cfg.items():
@@ -278,7 +278,7 @@ class Redeem:
                 e = name.split('-')[-1]
                 #if e in exclude:
                 #    continue
-                    
+
                 step_pin  = options["step_pin"]
                 dir_pin   = options["dir_pin"]
                 fault_pin = options["fault_pin"]
@@ -292,7 +292,7 @@ class Redeem:
             #    step_pin  = printer.config.get('Steppers', 'step_pin_' + name)
             #    dir_pin   = printer.config.get('Steppers', 'dir_pin_' + name)
             #    fault_pin = printer.config.get('Steppers', 'fault_pin_' + name)
-            #    printer.add_stepper(TMC2130(step_pin, dir_pin, fault_pin, name, spi_0_0))              
+            #    printer.add_stepper(TMC2130(step_pin, dir_pin, fault_pin, name, spi_0_0))
 
             for i in printer.steppers:
                 s = Stepper.printer.steppers[i]
@@ -329,7 +329,7 @@ class Redeem:
             opts = ["L", "r", "A_radial", "B_radial", "C_radial", "A_angular", "B_angular", "C_angular" ]
             for opt in opts:
                 Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
-                
+
         #######################################################################
         # TEMPERATURE CONTROL
         if printer.config.board_name == "Revolve":
@@ -345,11 +345,11 @@ class Redeem:
             #self.printer.fans.append(Fan_Pin(2, 1, self.printer.config.getfloat('Fans', "fan_3_max_value")))
 
             self.printer.fans = [None]*4
-            pins = ["0:0", "0:1", "2:0", "2:1"]
-            for i, c in enumerate([0,1,2,3]):
-                self.printer.config["Fans"]["Fan-{}".format(i)]["channel"] = c
-                self.printer.config["Fans"]["Fan-{}".format(i)]["pin"] = pins[i]
-                
+            #pins = ["0:0", "0:1", "2:0", "2:1"]
+            #for i, c in enumerate([0,1,2,3]):
+            #    self.printer.config["Fans"]["Fan-{}".format(i)]["channel"] = c
+            #self.printer.config["Fans"]["Fan-{}".format(i)]["pin"] = pins[i]
+
 
         # Discover and add all DS18B20 cold ends.
         paths = glob.glob("/sys/bus/w1/devices/28-*/w1_slave")
@@ -357,7 +357,7 @@ class Redeem:
         for i, path in enumerate(paths):
             self.printer.cold_ends.append(ColdEnd(path, "ds18b20-"+str(i)))
             logging.info("Found Cold end "+str(i)+" on " + path)
-           
+
         # update the channel information for fans
         if printer.config.board_name == "Replicape":
             if self.revision == "00A3":
@@ -377,7 +377,7 @@ class Redeem:
             self.printer.fans = [None]*3
             for i, c in enumerate([14,15,7]):
     	        self.printer.config["Fans"]["Fan-{}".format(i)]["channel"] = c
-        
+
         # define the inputs/outputs available on this board
         # also define those that are NOT available (for later use)
         exclude = []
@@ -387,7 +387,7 @@ class Redeem:
             heaters.extend(extra)
         else:
             exclude = extra
-        
+
 
         # Make Mosfets and thermistors
         for e in heaters:
@@ -397,7 +397,7 @@ class Redeem:
             sensor = self.printer.config.get("Thermistors", name, "sensor")
             self.printer.thermistors[e] = TemperatureSensor(adc, name, sensor)
             self.printer.thermistors[e].printer = printer
-            
+
             # Mosfets
             name = "Heater-{}".format(e)
             channel = self.printer.config.get("Heaters", name, "mosfet")
@@ -426,9 +426,9 @@ class Redeem:
         # build and connect all of the temperature control infrastructure
         self.printer.heaters = {}
         self.printer.command_connect = {}
-        
+
         # available control unit types, see TemperatureControl.py
-        control_units = {"alias":Alias, "difference":Difference, 
+        control_units = {"alias":Alias, "difference":Difference,
                       "maximum":Maximum, "minimum":Minimum,
                       "constant-control":ConstantControl,
                       "on-off-control":OnOffControl,
@@ -436,7 +436,7 @@ class Redeem:
                       "proportional-control":ProportionalControl,
                       "fan":Fan, "heater":Heater, "safety":Safety,
                       "gcode":CommandCode}
-    
+
         # generate units
         success = True
         units = {}
@@ -446,11 +446,11 @@ class Redeem:
             for name, options in cfg.items():
                 if not isinstance(options, Section):
                     continue
-                
+
                 e = name.split('-')[-1]
                 if e in exclude:
                     continue
-                
+
                 input_type = options["type"]
                 try:
                     unit = control_units[input_type](name, options, self.printer)
@@ -460,7 +460,7 @@ class Redeem:
                     self.config_error.append(msg)
                     logging.error(msg, exc_info=True)
                     success = False
-            
+
         # connect units
         for name, unit in units.items():
             try:
@@ -470,7 +470,7 @@ class Redeem:
                 self.config_error.append(msg)
                 logging.error(msg, exc_info=True)
                 success = False
-            
+
         # initialise units
         all_initialised = True
         for name, unit in units.items():
@@ -481,7 +481,7 @@ class Redeem:
                 self.config_error.append(msg)
                 logging.error(msg, exc_info=True)
                 success = False
-            
+
         # run checks
         for name, unit in units.items():
             try:
@@ -491,24 +491,24 @@ class Redeem:
                 self.config_error.append(msg)
                 logging.error(msg, exc_info=True)
                 success = False
-                
+
         if not success:
             logging.warning("Temperature control configuration invalid\n\n\n   Restarting Redeem with default.cfg only \n")
             self.initialize(configs = [configs[0]]) # re-run this method but only on default.cfg
             return
             # ^^^ this means that even if we stuff something up, redeem will not crash
             # it will probably be basically unusable, but it won't crash.
-        
+
         # turn on the fans and heaters
-        
+
         for fan in self.printer.fans:
             logging.info("{} enabled".format(fan.name))
             fan.enable()
-            
+
         for name, heater in self.printer.heaters.items():
             logging.info("{} enabled".format(name))
             heater.enable()
-                
+
         #######################################################################
         # SERVO
 
@@ -768,7 +768,7 @@ class Redeem:
         for name, heater in iteritems(self.printer.heaters):
             logging.debug("closing "+name)
             heater.disable()
-            
+
         for fan in self.printer.fans:
             logging.debug("closing "+fan.name)
             fan.disable()

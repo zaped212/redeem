@@ -36,14 +36,14 @@ class Fan(Unit):
     """
     Used to move air
     """
-    AM335 = 0
-    PCA9685 = 1
+    AM335 = "AM335"
+    PCA9685 = "PCA9685"
 
     def __init__(self, name, options, printer):
         """
         Fan initialization.
         """
-        
+
         self.name = name
         self.options = options
         self.printer = printer
@@ -51,35 +51,35 @@ class Fan(Unit):
         self.input = None
         if "input" in self.options:
             self.input = self.options["input"]
-            
+
         self.channel = int(self.options["channel"])
         logging.debug(options)
         # get fan index
         i = int(name[-1])
-        
+
         self.printer.fans[i] = self
         self.max_value = 1.0
-        
+
         self.counter += 1
-            
-        if int(self.options["chip"]) == Fan.AM335:
+
+        if self.options["chip"] == Fan.AM335:
             self.pin = PWM_AM335(
                 self.options["pin"], self.options["frequency"], 0)
             logging.debug("PWM pin created for {}".format(self.options["pin"]))
         return
-        
+
     def connect(self, units):
         """ Connect this unit to other units"""
         if self.input:
             self.input = self.get_unit(self.input, units)
-            if not self.input.output:        
+            if not self.input.output:
                 self.input.output = self
-            
+
     def check(self):
         """ Perform any checks or logging after all connections are made"""
         logging.info("{} --> {}".format(self.input, self.name))
-            
-        
+
+
 
     def set_PWM_frequency(self, value):
         """ Set the amount of on-time from 0..1 """
@@ -90,9 +90,9 @@ class Fan(Unit):
         """ Set the amount of on-time from 0..1 """
         #logging.debug("Setting fan value to {}".format(value))
         self.value = value
-        if int(self.options["chip"]) == Fan.PCA9685:
+        if self.options["chip"] == Fan.PCA9685:
             PWM_PCA9685.set_value(value, self.channel)
-        elif int(self.options["chip"]) == Fan.AM335:
+        elif self.options["chip"] == Fan.AM335:
             self.pin.set_value(value)
         return
 
@@ -107,9 +107,9 @@ class Fan(Unit):
 
     def run_controller(self):
         """ follow a target PWM value 0..1"""
-        
+
         while self.enabled:
-            self.set_value(self.input.get_value())            		 
+            self.set_value(self.input.get_value())
             time.sleep(self.input.sleep)
         self.disabled = True
 
@@ -124,19 +124,19 @@ class Fan(Unit):
 
     def enable(self):
         """ starts the controller """
-        
+
         if not self.input:
             self.enabled = False
             self.disabled = True
             self.set_value(0.0)
             return
-            
+
         self.enabled = True
         self.disabled = False
         self.t = Thread(target=self.run_controller, name=self.name)
         self.t.daemon = True
-        self.t.start()	
+        self.t.start()
         return
-        
+
     def __str__(self):
         return self.name
