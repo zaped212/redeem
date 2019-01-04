@@ -22,7 +22,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 try:
     from Adafruit_GPIO.I2C import Device as I2C
-except: 
+except:
     pass
 import time
 import subprocess
@@ -39,7 +39,7 @@ class PWM_PCA9685(object):
 
     def __init__(self, channel):
         self.channel = channel
-    
+
     def set_value(self, value):
         PWM_PCA9685.set_value(value, self.channel)
 
@@ -86,47 +86,60 @@ class PWM_PCA9685(object):
 
 
 class PWM_AM335(object):
-    def __init__(self, pin, frequency, duty_cycle): 
+    def __init__(self, pin, frequency, duty_cycle):
 
         self.enabled = False
         if pin == "P9_14":
             self.chip = 0
             self.channel = 0
+            self.type = "PWM"
         elif pin == "P9_16":
             self.chip = 0
             self.channel = 1
-        elif pin == "0:0":
-            self.chip = 4
-            self.channel = 0
-        elif pin == "0:1":
-            self.chip = 4
-            self.channel = 1
-        elif pin == "2:0":
-            self.chip = 6
-            self.channel = 0
-        elif pin == "2:1":
-            self.chip = 6
-            self.channel = 1
+            self.type = "PWM"
         elif pin == "4:0":
+            self.chip = 4
+            self.channel = 0
+            self.type = "PWM"
+        elif pin == "4:1":
+            self.chip = 4
+            self.channel = 1
+            self.type = "PWM"
+        elif pin == "6:0":
+            self.chip = 6
+            self.channel = 0
+            self.type = "PWM"
+        elif pin == "6:1":
+            self.chip = 6
+            self.channel = 1
+            self.type = "PWM"
+        elif pin == "0:0":
             self.chip = 0
             self.channel = 0
-        elif pin == "5:0":
+            self.type = "TIMER"
+        elif pin == "1:0":
             self.chip = 1
             self.channel = 0
-        elif pin == "6:0":
+            self.type = "TIMER"
+        elif pin == "2:0":
             self.chip = 2
             self.channel = 0
-        elif pin == "7:0":
+            self.type = "TIMER"
+        elif pin == "3:0":
             self.chip = 3
             self.channel = 0
+            self.type = "TIMER"
         else:
+            self.chip = -1
+            self.channel = -1
+            self.type = "NONE"
             logging.error("PWM_AM335: Unrecognized pin '{}'. You may have to implement it...".format(pin))
             return
 
         self.export_chip(self.chip, self.channel)
         self.set_frequency(frequency)
         self.set_value(duty_cycle)
-        
+
     def export_chip(self, chip, channel):
         self.base = "/sys/class/pwm/pwmchip{}/pwm-{}:{}".format(chip, chip, channel)
         if not os.path.exists(self.base):
@@ -134,25 +147,31 @@ class PWM_AM335(object):
                 f.write(str(channel))
             if not os.path.exists(self.base):
                 logging.warning("Unable to export PWM pin")
-        
+
 
     def set_enabled(self, is_enabled = True):
         if self.enabled == is_enabled:
             return
         path = self.base+"/enable"
-        with open(path, "w") as f:           
+        with open(path, "w") as f:
             f.write("1" if is_enabled else "0")
         self.enabled = is_enabled
 
 
     def set_frequency(self, freq):
         """ Set the PWM frequency for all fans connected on this PWM-chip """
+        if self.type == "TIMER" and freq > 1000:
+            logging.warning("Frequency too high, clamping to {} Hz for {} pin {}:{}".format(freq, self.type, self.chip, self.channel))
+            freq = 1000
+        if self.type == "PWM" and freq < 1000:
+            logging.warning("Frequency too low, clamping to {} Hz for {} pin {}:{}".format(freq, self.type, self.chip, self.channel))
+            freq = 1000
         # period is specified in nanoseconds
-        period = int( (1.0/float(freq))*(10**6) )
+        period = int( (1.0/float(freq))*(10**9) )
         self.period = period
         path = self.base+"/period"
-        
-        logging.debug("Setting period to "+str(period)+" (freq: "+str(freq)+")")
+
+        logging.debug("Setting period to "+str(period)+"ns (freq: "+str(freq)+" Hz)")
         with open(path, "w") as f:
             f.write(str(period))
 
@@ -160,10 +179,9 @@ class PWM_AM335(object):
         """ Set the amount of on-time from 0..1 """
         duty_cycle = int(self.period*float(value))
         path = self.base+"/duty_cycle"
-        #logging.debug("Setting duty_cycle to "+str(duty_cycle))
         with open(path, "w") as f:
             f.write(str(duty_cycle))
-        # Call enable/disable here since the timer pins 
+        # Call enable/disable here since the timer pins
         self.set_enabled( (value > 0) )
 
 
@@ -176,12 +194,12 @@ class PWM_AM335(object):
 
 
 if __name__ == '__main__':
-   
+
     # This is now broken!
 
     p1 = PWM_AM335("P9_14", 50, 0.1)
     p2 = PWM_AM335("P9_16", 50, 0.1)
-    
+
     while 1:
         for i in range(100):
             p1.set_value(0.1+(i*0.001))
@@ -200,16 +218,14 @@ if __name__ == '__main__':
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                         datefmt='%m-%d %H:%M')
 
-    exp = 2.3   
+    exp = 2.3
 
     PWM.set_frequency(1000)
     while True:
         for i in np.linspace(0.0, 6.28, 100):
-            logging.info((0.5+0.5*np.sin(i)))        
+            logging.info((0.5+0.5*np.sin(i)))
             PWM.set_value((0.5+0.5*np.sin(i+0.0*np.pi/2.0))**exp, 7)
             PWM.set_value((0.5+0.5*np.sin(i+1.0*np.pi/2.0))**exp, 8)
             PWM.set_value((0.5+0.5*np.sin(i+2.0*np.pi/2.0))**exp, 9)
             PWM.set_value((0.5+0.5*np.sin(i+3.0*np.pi/2.0))**exp, 10)
             time.sleep(0.01)
-
-
