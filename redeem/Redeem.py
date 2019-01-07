@@ -385,9 +385,11 @@ class Redeem:
         extra = ["A", "B", "C"]
         if printer.config.addon_rev == "00A0":
             heaters.extend(extra)
+        elif printer.config.board_name == "Revolve":
+            heaters = ["E", "H", "HBP", "A"]
+            exclude = ["B", "C"]
         else:
             exclude = extra
-
 
         # Make Mosfets and thermistors
         for e in heaters:

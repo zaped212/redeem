@@ -101,7 +101,7 @@ class PWM_AM335(object):
 
         (self.chip, self.channel) = pin.split(":")
 
-        if self.chip in [0, 1, 2, 3]:
+        if int(self.chip) in [0, 1, 2, 3]:
             self.type = "TIMER"
         else:
             self.type = "PWM"
