@@ -36,3 +36,5 @@ python setup.py develop
 
 
 chown -R octo:octo ${REDEEM_ENVIRONMENT}
+
+systemctl restart redeem
